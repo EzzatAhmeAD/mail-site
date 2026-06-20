@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تسجيل الدخول للبريد الإلكتروني</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+</head>
+<body class="bg-slate-900 text-slate-100 flex items-center justify-center min-h-screen font-sans p-4">
+
+    <div id="login-card" class="bg-slate-800 p-8 rounded-2xl shadow-xl w-full max-w-md border border-slate-700">
+        <h2 class="text-2xl font-bold text-center text-blue-400 mb-6">لوحة استلام الأكواد الفورية</h2>
+        <div class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium mb-1 text-slate-400">الإيميل أو اسم المستخدم:</label>
+                <input type="text" id="username" placeholder="user55@ezzatrabie.com" class="w-full p-3 rounded-lg bg-slate-950 border border-slate-700 focus:outline-none focus:border-blue-500 text-left" dir="ltr">
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-1 text-slate-400">كلمة السر:</label>
+                <input type="password" id="password" placeholder="••••••••" class="w-full p-3 rounded-lg bg-slate-950 border border-slate-700 focus:outline-none focus:border-blue-500 text-left" dir="ltr">
+            </div>
+            <button onclick="login()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-lg transition duration-200 cursor-pointer">دخول وصندوق الوارد</button>
+            <p id="error-msg" class="text-red-400 text-sm text-center hidden"></p>
+        </div>
+    </div>
+
+    <div id="inbox-card" class="bg-slate-800 p-6 rounded-2xl shadow-xl w-full max-w-2xl border border-slate-700 hidden">
+        <div class="flex justify-between items-center mb-6 border-b border-slate-700 pb-4">
+            <div>
+                <h2 class="text-xl font-bold text-blue-400">صندوق الوارد المباشر</h2>
+                <p id="active-user" class="text-sm text-slate-400 mt-1"></p>
+            </div>
+            <button onclick="logout()" class="bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded-lg text-sm transition cursor-pointer">خروج</button>
+        </div>
+
+        <div id="emails-list" class="space-y-4 max-h-[400px] overflow-y-auto pr-2">
+            <p class="text-slate-400 text-center py-8">في انتظار وصول كود التحقق... (يتم التحديث تلقائياً)</p>
+        </div>
+    </div>
+
+    <script>
+        let checkInterval = null;
+
+        async function login() {
+            const user = document.getElementById('username').value;
+            const pass = document.getElementById('password').value;
+            const errorMsg = document.getElementById('error-msg');
+
+            errorMsg.classList.add('hidden');
+
+            try {
+                const res = await fetch(`/api/receive-email?username=${encodeURIComponent(user)}&password=${encodeURIComponent(pass)}`);
+                const data = await res.json();
+
+                if (!res.ok) {
+                    errorMsg.innerText = data.error || 'خطأ في الدخول';
+                    errorMsg.classList.remove('hidden');
+                    return;
+                }
+
+                document.getElementById('login-card').classList.add('hidden');
+                document.getElementById('inbox-card').classList.remove('hidden');
+                document.getElementById('active-user').innerText = `الحساب النشط: ${user}`;
+                
+                renderEmails(data.emails);
+
+                // تحديث فوري كل ثانيتين لسحب الأكواد
+                checkInterval = setInterval(async () => {
+                    const refreshRes = await fetch(`/api/receive-email?username=${encodeURIComponent(user)}&password=${encodeURIComponent(pass)}`);
+                    const refreshData = await refreshRes.json();
+                    if (refreshRes.ok) renderEmails(refreshData.emails);
+                }, 2000);
+
+            } catch (e) {
+                errorMsg.innerText = 'فشل الاتصال بالسيرفر';
+                errorMsg.classList.remove('hidden');
+            }
+        }
+
+        function renderEmails(emails) {
+            const list = document.getElementById('emails-list');
+            if (!emails || emails.length === 0) {
+                list.innerHTML = '<p class="text-slate-400 text-center py-8">في انتظار وصول الأكواد... اطلب الكود من اللعبة الآن</p>';
+                return;
+            }
+
+            list.innerHTML = emails.map(email => `
+                <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2 text-left" dir="ltr">
+                    <div class="flex justify-between text-xs text-slate-500">
+                        <span>From: ${email.source}</span>
+                        <span>${new Date(email.date).toLocaleTimeString('en-US')}</span>
+                    </div>
+                    <div class="font-semibold text-blue-300 text-right" dir="rtl">الموضوع: ${email.subject}</div>
+                    <div class="text-sm text-slate-300 bg-slate-900 p-3 rounded border border-slate-800 whitespace-pre-line">${email.text}</div>
+                </div>
+            `).join('');
+        }
+
+        function logout() {
+            clearInterval(checkInterval);
+            document.getElementById('login-card').classList.remove('hidden');
+            document.getElementById('inbox-card').classList.add('hidden');
+        }
+    </script>
+</body>
+</html>
