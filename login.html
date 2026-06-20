@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Instant Code Receiver</title>
+    <style>
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background: #0f172a; 
+            color: #ffffff;
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            height: 100vh; 
+            margin: 0; 
+        }
+        .login-box { 
+            background: #1e293b; 
+            padding: 40px 30px; 
+            border-radius: 8px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3); 
+            width: 320px; 
+            text-align: center; 
+            border: 1px solid #334155;
+        }
+        h2 { margin-top: 0; color: #38bdf8; font-size: 24px; margin-bottom: 25px; }
+        input { 
+            width: 100%; 
+            padding: 12px; 
+            margin: 10px 0; 
+            border: 1px solid #334155; 
+            border-radius: 6px; 
+            box-sizing: border-box; 
+            background: #0f172a;
+            color: #fff;
+            font-size: 14px;
+        }
+        input:focus { border-color: #38bdf8; outline: none; }
+        button { 
+            width: 100%; 
+            padding: 12px; 
+            background: #0284c7; 
+            color: white; 
+            border: none; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            font-weight: bold; 
+            font-size: 15px;
+            margin-top: 15px;
+            transition: background 0.2s;
+        }
+        button:hover { background: #0369a1; }
+        .remember { text-align: left; margin: 10px 0; font-size: 13px; color: #94a3b8; display: flex; align-items: center; }
+        .remember input { width: auto; margin-right: 8px; margin-top: 0; margin-bottom: 0; }
+    </style>
+</head>
+<body>
+
+    <div class="login-box">
+        <h2>Sign In</h2>
+        <input type="text" id="username" placeholder="Username">
+        <input type="password" id="password" placeholder="Password">
+        
+        <div class="remember">
+            <input type="checkbox" id="remember-me">
+            <label for="remember-me">Remember me always</label>
+        </div>
+        
+        <button onclick="handleLogin()">Login</button>
+    </div>
+
+    <script>
+        window.onload = function() {
+            if (localStorage.getItem('isLoggedIn') === 'true' || sessionStorage.getItem('isLoggedIn') === 'true') {
+                window.location.href = 'index.html';
+            }
+        };
+
+        function handleLogin() {
+            const user = document.getElementById('username').value;
+            const pass = document.getElementById('password').value;
+            const remember = document.getElementById('remember-me').checked;
+
+            // يمكنك تغيير اسم المستخدم وكلمة المرور من هنا
+            if (user === "admin" && pass === "1234") { 
+                if (remember) {
+                    localStorage.setItem('isLoggedIn', 'true'); 
+                } else {
+                    sessionStorage.setItem('isLoggedIn', 'true'); 
+                }
+                window.location.href = 'index.html'; 
+            } else {
+                alert("Invalid Username or Password!");
+            }
+        }
+    </script>
+</body>
+</html>
