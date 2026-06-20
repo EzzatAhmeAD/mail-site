@@ -1,98 +1,41 @@
 <!DOCTYPE html>
-<html lang="en" dir="ltr">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Instant Code Receiver</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <title>Inbox</title>
     <style>
-        body { font-family: 'Inter', sans-serif; margin: 0; background: #0b0f19; color: #ffffff; display: flex; height: 100vh; overflow: hidden; }
-        .header { background: #111c24; padding: 15px 25px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1e293b; width: 100%; position: absolute; top: 0; }
-        .app-container { display: flex; flex: 1; margin-top: 70px; overflow: hidden; }
-        .sidebar { width: 340px; background: #111622; border-right: 1px solid #1e293b; padding: 20px; display: flex; flex-direction: column; }
-        .emails-scroll { flex: 1; overflow-y: auto; }
-        .email-item { background: #111c24; padding: 16px; margin-bottom: 12px; border-radius: 8px; cursor: pointer; border: 1px solid #1e293b; transition: 0.2s; }
-        .email-item:hover { border-color: #475569; }
-        .email-item.selected { border-color: #38bdf8; background: #152232; }
-        .main-content { flex: 1; padding: 30px; overflow-y: auto; background: #0b0f19; }
-        #email-body { background: #ffffff; color: #0f172a; padding: 30px; border-radius: 10px; min-height: 400px; }
-        .logout-btn { background: #1e293b; color: #ff4d4f; border: 1px solid #334155; padding: 8px 18px; border-radius: 6px; cursor: pointer; }
+        body { font-family: sans-serif; background: #0b0f19; color: white; margin: 0; display: flex; height: 100vh; }
+        .sidebar { width: 300px; background: #111622; border-right: 1px solid #1e293b; padding: 20px; overflow-y: auto; }
+        .main { flex: 1; padding: 20px; color: #fff; }
+        .email { background: #111c24; padding: 15px; margin-bottom: 10px; cursor: pointer; border-radius: 5px; border: 1px solid #334155; }
+        .email:hover { background: #1e293b; }
     </style>
 </head>
 <body>
-
-    <div class="header">
-        <h1>Inbox</h1>
-        <button class="logout-btn" onclick="logout()">Logout</button>
-    </div>
-
-    <div class="app-container">
-        <div class="sidebar">
-            <div id="mail-count" style="margin-bottom: 15px; color: #94a3b8; font-size: 13px;">Loading...</div>
-            <div class="emails-scroll" id="emails-list"></div>
-        </div>
-        <div class="main-content">
-            <div id="email-body">Select an email to view content...</div>
-        </div>
-    </div>
+    <div class="sidebar" id="list"><h3>Loading...</h3></div>
+    <div class="main" id="content"><h2>Select an email</h2></div>
 
     <script>
-        // التحقق من الدخول
-        if (localStorage.getItem('isLoggedIn') !== 'true' && sessionStorage.getItem('isLoggedIn') !== 'true') {
-            window.location.href = 'login.html';
-        }
+        // التحقق من تسجيل الدخول
+        if (!localStorage.getItem('isLoggedIn')) window.location.href = 'login.html';
 
-        let allEmails = [];
-
-        async function fetchEmails() {
+        async function loadEmails() {
             try {
-                const response = await fetch('/api/receive-email');
-                const data = await response.json();
+                const res = await fetch('/api/receive-email');
+                const data = await res.json();
+                const list = document.getElementById('list');
+                list.innerHTML = '<h3>Inbox</h3>';
                 
-                // هنا التعديل: بنجرب نشوف لو البيانات مصفوفة مباشرة أو جوا خاصية
-                console.log("Data received:", data); 
-                
-                if (Array.isArray(data)) {
-                    allEmails = data;
-                } else if (data.emails && Array.isArray(data.emails)) {
-                    allEmails = data.emails;
-                } else {
-                    console.error("Format not recognized:", data);
-                    return;
-                }
-
-                renderEmails();
-            } catch (error) {
-                document.getElementById('mail-count').innerText = "Error loading emails";
-                console.error("Fetch Error:", error);
-            }
+                data.forEach(mail => {
+                    const div = document.createElement('div');
+                    div.className = 'email';
+                    div.innerHTML = `<h4>${mail.sender || 'Unknown'}</h4><p>${mail.subject || 'No Subject'}</p>`;
+                    div.onclick = () => document.getElementById('content').innerHTML = `<h3>${mail.subject}</h3><p>${mail.body || "No content"}</p>`;
+                    list.appendChild(div);
+                });
+            } catch (e) { document.getElementById('list').innerHTML = "Error loading"; }
         }
-
-        function renderEmails() {
-            const listContainer = document.getElementById('emails-list');
-            listContainer.innerHTML = '';
-            document.getElementById('mail-count').innerText = `Total: ${allEmails.length}`;
-
-            allEmails.reverse().forEach(email => {
-                const item = document.createElement('div');
-                item.className = 'email-item';
-                item.onclick = () => showContent(email);
-                item.innerHTML = `<h4>${email.sender || 'Unknown'}</h4><p>${email.subject || 'No Subject'}</p>`;
-                listContainer.appendChild(item);
-            });
-        }
-
-        function showContent(email) {
-            document.getElementById('email-body').innerHTML = email.html || email.body || "No content found.";
-        }
-
-        function logout() {
-            localStorage.removeItem('isLoggedIn');
-            sessionStorage.removeItem('isLoggedIn');
-            window.location.href = 'login.html';
-        }
-
-        fetchEmails();
-        setInterval(fetchEmails, 10000);
+        loadEmails();
     </script>
 </body>
 </html>
