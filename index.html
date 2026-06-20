@@ -5,15 +5,28 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Live Inbox</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* أنيميشن لف أيقونة الـ Refresh عند الضغط */
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .spinning {
+            animation: spin 1s linear infinite;
+        }
+    </style>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen font-sans flex flex-col">
 
-    <header class="bg-slate-800 border-b border-slate-755 p-4 flex justify-between items-center shadow-md z-10">
+    <header class="bg-slate-800 border-b border-slate-700 p-4 flex justify-between items-center shadow-md z-10">
         <div>
             <h1 class="text-xl font-bold text-blue-400">Instant Code Receiver</h1>
             <p id="active-user" class="text-xs text-slate-400 mt-0.5 hidden"></p>
         </div>
-        <button id="logout-btn" onclick="logout()" class="bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded-lg text-sm transition cursor-pointer hidden">Logout</button>
+        <button id="logout-btn" onclick="logout()" class="bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded-lg text-sm transition cursor-pointer hidden">
+            <i class="fa-solid Nav-icon fa-right-from-bracket mr-1"></i> Logout
+        </button>
     </header>
 
     <div id="login-card" class="flex-1 flex items-center justify-center p-4">
@@ -36,9 +49,12 @@
 
     <div id="inbox-card" class="flex-1 flex overflow-hidden hidden">
         
-        <aside class="w-1/3 min-w-[320px] max-w-[400px] bg-slate-850 border-r border-slate-750 flex flex-col">
-            <div class="p-4 bg-slate-900 border-b border-slate-800 text-sm font-semibold text-slate-400">
-                Messages Inbox
+        <aside class="w-1/3 min-w-[340px] max-w-[420px] bg-slate-850 border-r border-slate-750 flex flex-col">
+            <div class="p-4 bg-slate-900 border-b border-slate-800 text-sm font-semibold text-slate-400 flex justify-between items-center">
+                <span>Messages Inbox</span>
+                <button onclick="manualRefresh()" class="text-slate-400 hover:text-blue-400 transition cursor-pointer p-1" title="Refresh Emails">
+                    <i id="refresh-icon" class="fa-solid fa-arrow-rotate-right text-base"></i>
+                </button>
             </div>
             <div id="emails-list" class="flex-1 overflow-y-auto p-2 space-y-2">
                 <p class="text-slate-500 text-center py-8 text-sm">Waiting for emails...</p>
@@ -73,6 +89,7 @@
     <script>
         let checkInterval = null;
         let allEmails = [];
+        let deletedEmailIds = JSON.parse(localStorage.getItem('deleted_emails') || '[]'); 
         let selectedEmailIndex = null;
 
         window.onload = function() {
@@ -138,6 +155,19 @@
             checkInterval = setInterval(() => { fetchEmails(userVal, pass); }, 2000);
         }
 
+        async function manualRefresh() {
+            const icon = document.getElementById('refresh-icon');
+            icon.classList.add('spinning'); // تشغيل اللف
+
+            const userVal = localStorage.getItem('saved_username');
+            const pass = localStorage.getItem('saved_password');
+            if (userVal && pass) {
+                await fetchEmails(userVal, pass);
+            }
+            
+            setTimeout(() => { icon.classList.remove('spinning'); }, 800); // إيقاف اللف بعد ثانية
+        }
+
         async function fetchEmails(userVal, pass) {
             try {
                 const res = await fetch(`/api/receive-email?username=${encodeURIComponent(userVal)}&password=${encodeURIComponent(pass)}`);
@@ -145,7 +175,6 @@
                 if (res.ok) {
                     allEmails = data.emails || [];
                     renderEmailsList();
-                    // تحديث الرسالة المفتوحة حالياً لو لسه موجودة وجات رسايل جديدة
                     if (selectedEmailIndex !== null) {
                         viewEmail(selectedEmailIndex, false); 
                     }
@@ -157,37 +186,49 @@
 
         function renderEmailsList() {
             const list = document.getElementById('emails-list');
-            if (!allEmails || allEmails.length === 0) {
+            
+            // فلترة الرسائل المحذوفة بناءً على الـ date كـ معرّف فريد للرسالة
+            const activeEmails = allEmails.filter(email => !deletedEmailIds.includes(email.date));
+
+            if (!activeEmails || activeEmails.length === 0) {
                 list.innerHTML = '<p class="text-slate-500 text-center py-8 text-sm">No messages received yet.</p>';
                 return;
             }
             
             list.innerHTML = allEmails.map((email, index) => {
+                // لو الإيميل ممسوح متظهروش في القائمة
+                if (deletedEmailIds.includes(email.date)) return '';
+
                 const displaySource = email.source.split('<')[0].replace(/"/g, '').trim() || email.source;
                 const isSelected = selectedEmailIndex === index ? 'border-blue-500 bg-slate-800' : 'border-slate-800 bg-slate-950 hover:bg-slate-900';
                 
                 return `
-                    <div onclick="viewEmail(${index}, true)" class="${isSelected} border p-3 rounded-xl cursor-pointer transition duration-150 shadow-sm space-y-1 block">
-                        <div class="flex justify-between items-center">
-                            <span class="font-bold text-sm text-blue-400 truncate max-w-[180px]">${displaySource}</span>
-                            <span class="text-[10px] text-slate-500">${new Date(email.date).toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit'})}</span>
+                    <div onclick="viewEmail(${index}, true)" class="${isSelected} border p-3 rounded-xl cursor-pointer transition duration-150 flex justify-between items-center gap-2 group">
+                        <div class="flex-1 min-w-0 space-y-1">
+                            <div class="flex justify-between items-center">
+                                <span class="font-bold text-sm text-blue-400 truncate max-w-[150px]">${displaySource}</span>
+                                <span class="text-[10px] text-slate-500">${new Date(email.date).toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit'})}</span>
+                            </div>
+                            <div class="text-xs text-slate-300 truncate font-medium">${email.subject}</div>
                         </div>
-                        <div class="text-xs text-slate-300 truncate font-medium">${email.subject}</div>
+                        <button onclick="deleteEmail(event, '${email.date}', ${index})" class="text-slate-500 hover:text-red-400 p-2 rounded-lg transition opacity-0 group-hover:opacity-100 duration-150" title="Delete Email">
+                            <i class="fa-regular fa-trash-can"></i>
+                        </button>
                     </div>
                 `;
             }).join('');
         }
 
         function viewEmail(index, shouldScroll = true) {
-            selectedEmailIndex = index;
+            // لو الرسالة دي اتمسحت خلاص، متفتحهاش
             const email = allEmails[index];
-            if (!email) return;
-
-            // تحديث تصميم القائمة الجانبية لإظهار العنصر المختار
-            const listItems = document.getElementById('emails-list').children;
-            if(listItems.length === allEmails.length) {
-                renderEmailsList();
+            if (!email || deletedEmailIds.includes(email.date)) {
+                closeEmailView();
+                return;
             }
+
+            selectedEmailIndex = index;
+            renderEmailsList();
 
             document.getElementById('no-email-selected').classList.add('hidden');
             document.getElementById('email-detail-view').classList.remove('hidden');
@@ -199,7 +240,6 @@
             const contentArea = document.getElementById('detail-content-area');
             
             if (email.html) {
-                // نتحقق لو الإيفريم اتعمل قبل كدا عشان نحدثه بس من غير ما نعمل وميض
                 const existingFrame = document.getElementById('detail-frame');
                 if (!existingFrame) {
                     contentArea.innerHTML = `<iframe id="detail-frame" class="w-full h-[580px] bg-white rounded-xl border border-slate-700 mt-2 shadow-inner" sandbox="allow-same-origin"></iframe>`;
@@ -208,7 +248,6 @@
                 const iframe = document.getElementById('detail-frame');
                 if (iframe) {
                     const doc = iframe.contentDocument || iframe.contentWindow.document;
-                    // تحديث المحتوى فقط لو اتغير
                     if (iframe.getAttribute('data-src-html') !== email.html) {
                         doc.open();
                         doc.write(email.html);
@@ -221,16 +260,37 @@
             }
         }
 
+        function deleteEmail(event, emailDateId, index) {
+            event.stopPropagation(); // منع فتح الرسالة عند الضغط على السلة
+            
+            if (confirm("Are you sure you want to delete this email?")) {
+                deletedEmailIds.push(emailDateId);
+                localStorage.setItem('deleted_emails', JSON.stringify(deletedEmailIds)); // حفظ الحذف بشكل دائم
+                
+                // لو الرسالة اللي بنمسحها هي اللي مفتوحة حالياً في النص، نقفل العرض
+                if (selectedEmailIndex === index) {
+                    closeEmailView();
+                }
+                renderEmailsList();
+            }
+        }
+
+        function closeEmailView() {
+            selectedEmailIndex = null;
+            document.getElementById('email-detail-view').classList.add('hidden');
+            document.getElementById('no-email-selected').classList.remove('hidden');
+        }
+
         function logout() {
             clearInterval(checkInterval);
-            localStorage.clear();
+            localStorage.removeItem('saved_username');
+            localStorage.removeItem('saved_password');
             allEmails = [];
             selectedEmailIndex = null;
             document.getElementById('username').value = '';
             document.getElementById('password').value = '';
             
-            document.getElementById('email-detail-view').classList.add('hidden');
-            document.getElementById('no-email-selected').classList.remove('hidden');
+            closeEmailView();
             document.getElementById('inbox-card').classList.add('hidden');
             document.getElementById('logout-btn').classList.add('hidden');
             document.getElementById('active-user').classList.add('hidden');
