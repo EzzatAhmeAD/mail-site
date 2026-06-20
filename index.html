@@ -19,8 +19,8 @@
                 <label class="block text-sm font-medium mb-1 text-slate-400">Password:</label>
                 <input type="password" id="password" placeholder="••••••••" class="w-full p-3 rounded-lg bg-slate-950 border border-slate-700 focus:outline-none focus:border-blue-500">
             </div>
-            <button onclick="login()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-lg transition duration-200 cursor-pointer">Login to Inbox</button>
-            <p id="error-msg" class="text-red-400 text-sm text-center hidden"></p>
+            <button onclick="login()" id="login-btn" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-lg transition duration-200 cursor-pointer">Login to Inbox</button>
+            <p id="error-msg" class="text-red-400 text-sm text-center font-semibold mt-2 hidden"></p>
         </div>
     </div>
 
@@ -42,45 +42,53 @@
         let checkInterval = null;
 
         async function login() {
-            const user = document.getElementById('username').value;
+            const user = document.getElementById('username').value.disabled = false;
             const pass = document.getElementById('password').value;
             const errorMsg = document.getElementById('error-msg');
+            const loginBtn = document.getElementById('login-btn');
 
             errorMsg.classList.add('hidden');
+            errorMsg.innerText = '';
+            loginBtn.innerText = 'Connecting...';
+
+            const userVal = document.getElementById('username').value;
 
             try {
-                const res = await fetch(`/api/receive-email?username=${encodeURIComponent(user)}&password=${encodeURIComponent(pass)}`);
+                const res = await fetch(`/api/receive-email?username=${encodeURIComponent(userVal)}&password=${encodeURIComponent(pass)}`);
                 const data = await res.json();
 
                 if (!res.ok) {
-                    errorMsg.innerText = data.error || 'Login failed';
+                    errorMsg.innerText = data.error || 'Login failed. Please check credentials.';
                     errorMsg.classList.remove('hidden');
+                    loginBtn.innerText = 'Login to Inbox';
                     return;
                 }
 
+                // دخول ناجح
                 document.getElementById('login-card').classList.add('hidden');
                 document.getElementById('inbox-card').classList.remove('hidden');
-                document.getElementById('active-user').innerText = `Active Account: ${user}`;
+                document.getElementById('active-user').innerText = `Active Account: ${userVal}`;
                 
                 renderEmails(data.emails);
 
-                // Auto refresh every 2 seconds
+                // تحديث كل ثانيتين لسحب الكود
                 checkInterval = setInterval(async () => {
-                    const refreshRes = await fetch(`/api/receive-email?username=${encodeURIComponent(user)}&password=${encodeURIComponent(pass)}`);
+                    const refreshRes = await fetch(`/api/receive-email?username=${encodeURIComponent(userVal)}&password=${encodeURIComponent(pass)}`);
                     const refreshData = await refreshRes.json();
                     if (refreshRes.ok) renderEmails(refreshData.emails);
                 }, 2000);
 
             } catch (e) {
-                errorMsg.innerText = 'Failed to connect to server';
+                errorMsg.innerText = 'Server Error. Please try again later.';
                 errorMsg.classList.remove('hidden');
+                loginBtn.innerText = 'Login to Inbox';
             }
         }
 
         function renderEmails(emails) {
             const list = document.getElementById('emails-list');
             if (!emails || emails.length === 0) {
-                list.innerHTML = '<p class="text-slate-400 text-center py-8">No codes received yet... Trigger the verification code from the game now.</p>';
+                list.innerHTML = '<p class="text-slate-400 text-center py-8">No codes received yet... Send the verification code from Epic Games / Riot Games now.</p>';
                 return;
             }
 
@@ -88,4 +96,20 @@
                 <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2">
                     <div class="flex justify-between text-xs text-slate-500">
                         <span>From: ${email.source}</span>
-                        <span>${new Date(email
+                        <span>${new Date(email.date).toLocaleTimeString('en-US')}</span>
+                    </div>
+                    <div class="font-semibold text-blue-300">Subject: ${email.subject}</div>
+                    <div class="text-sm text-slate-300 bg-slate-900 p-3 rounded border border-slate-800 whitespace-pre-line">${email.text}</div>
+                </div>
+            `).join('');
+        }
+
+        function logout() {
+            clearInterval(checkInterval);
+            document.getElementById('login-card').classList.remove('hidden');
+            document.getElementById('inbox-card').classList.add('hidden');
+            document.getElementById('login-btn').innerText = 'Login to Inbox';
+        }
+    </script>
+</body>
+</html>
