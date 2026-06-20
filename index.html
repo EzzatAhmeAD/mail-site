@@ -33,7 +33,7 @@
             <button onclick="logout()" class="bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded-lg text-sm transition cursor-pointer">Logout</button>
         </div>
 
-        <div id="emails-list" class="space-y-6 max-h-[600px] overflow-y-auto pr-2">
+        <div id="emails-list" class="space-y-6 max-h-[700px] overflow-y-auto pr-2">
             <p class="text-slate-400 text-center py-8">Waiting for verification code...</p>
         </div>
     </div>
@@ -41,11 +41,26 @@
     <script>
         let checkInterval = null;
 
-        async function login() {
+        // أول ما الصفحة تفتح، بنشوف هل فيه مستخدم مسجل قبل كدا ولا لأ عشان يدخل تلقائي
+        window.onload = function() {
+            const savedUser = localStorage.getItem('saved_username');
+            const savedPass = localStorage.getItem('saved_password');
+
+            if (savedUser && savedPass) {
+                document.getElementById('username').value = savedUser;
+                document.getElementById('password').value = savedPass;
+                login(true); // تسجيل دخول تلقائي
+            }
+        };
+
+        async function login(isAuto = false) {
             const errorMsg = document.getElementById('error-msg');
             const loginBtn = document.getElementById('login-btn');
-            errorMsg.classList.add('hidden');
-            loginBtn.innerText = 'Connecting...';
+            
+            if (!isAuto) {
+                errorMsg.classList.add('hidden');
+                loginBtn.innerText = 'Connecting...';
+            }
 
             const userVal = document.getElementById('username').value;
             const pass = document.getElementById('password').value;
@@ -55,11 +70,17 @@
                 const data = await res.json();
 
                 if (!res.ok) {
+                    localStorage.removeItem('saved_username');
+                    localStorage.removeItem('saved_password');
                     errorMsg.innerText = data.error || 'Login failed.';
                     errorMsg.classList.remove('hidden');
                     loginBtn.innerText = 'Login to Inbox';
                     return;
                 }
+
+                // حفظ البيانات في المتصفح عشان الريفريش
+                localStorage.setItem('saved_username', userVal);
+                localStorage.setItem('saved_password', pass);
 
                 document.getElementById('login-card').classList.add('hidden');
                 document.getElementById('inbox-card').classList.remove('hidden');
@@ -67,6 +88,8 @@
                 
                 renderEmails(data.emails);
 
+                // التحديث التلقائي المستمر
+                if (checkInterval) clearInterval(checkInterval);
                 checkInterval = setInterval(async () => {
                     const refreshRes = await fetch(`/api/receive-email?username=${encodeURIComponent(userVal)}&password=${encodeURIComponent(pass)}`);
                     const refreshData = await refreshRes.json();
@@ -74,9 +97,11 @@
                 }, 2000);
 
             } catch (e) {
-                errorMsg.innerText = 'Server Error.';
-                errorMsg.classList.remove('hidden');
-                loginBtn.innerText = 'Login to Inbox';
+                if (!isAuto) {
+                    errorMsg.innerText = 'Server Error.';
+                    errorMsg.classList.remove('hidden');
+                    loginBtn.innerText = 'Login to Inbox';
+                }
             }
         }
 
@@ -87,22 +112,27 @@
                 return;
             }
 
+            // عرض الرسائل في قائمة مرتبة ومنظمة داخل كروت احترافية
             list.innerHTML = emails.map((email, index) => {
-                // التعديل هنا: استخدام المقاس الكبير والـ sandbox الآمن لقراءة الـ HTML النظيف
-                const contentHtml = email.html ? `<iframe id="frame-${index}" class="w-full h-[600px] bg-white rounded-xl border border-slate-700 mt-2 shadow-inner" sandbox="allow-same-origin"></iframe>` : `<div class="text-sm text-slate-300 bg-slate-900 p-4 rounded-xl whitespace-pre-line border border-slate-800">${email.text}</div>`;
+                const contentHtml = email.html ? 
+                    `<iframe id="frame-${index}" class="w-full h-[600px] bg-white rounded-xl border border-slate-700 mt-3 shadow-inner" sandbox="allow-same-origin"></iframe>` : 
+                    `<div class="text-sm text-slate-300 bg-slate-900 p-4 rounded-xl whitespace-pre-line border border-slate-800 mt-3">${email.text}</div>`;
                 
                 return `
-                    <div class="bg-slate-950 p-4 rounded-xl border border-slate-850 space-y-2">
-                        <div class="flex justify-between text-xs text-slate-500">
-                            <span>From: ${email.source}</span>
-                            <span>${new Date(email.date).toLocaleTimeString('en-US')}</span>
+                    <div class="bg-slate-950 p-5 rounded-2xl border border-slate-800 shadow-md space-y-3">
+                        <div class="flex flex-wrap justify-between items-center text-xs text-slate-400 bg-slate-900 p-3 rounded-lg border border-slate-800 gap-2">
+                            <div><span class="text-blue-400 font-medium">From:</span> ${email.source}</div>
+                            <div><span class="text-blue-400 font-medium">Received:</span> ${new Date(email.date).toLocaleTimeString('en-US')}</div>
                         </div>
-                        <div class="font-semibold text-blue-300">Subject: ${email.subject}</div>
+                        <div class="text-lg font-semibold text-slate-200 pl-1">
+                            <span class="text-blue-500">Subject:</span> ${email.subject}
+                        </div>
                         ${contentHtml}
                     </div>
                 `;
             }).join('');
 
+            // حقن كود الـ HTML داخل الـ iframe
             emails.forEach((email, index) => {
                 if (email.html) {
                     const iframe = document.getElementById(`frame-${index}`);
@@ -118,6 +148,10 @@
 
         function logout() {
             clearInterval(checkInterval);
+            localStorage.removeItem('saved_username');
+            localStorage.removeItem('saved_password');
+            document.getElementById('username').value = '';
+            document.getElementById('password').value = '';
             document.getElementById('login-card').classList.remove('hidden');
             document.getElementById('inbox-card').classList.add('hidden');
             document.getElementById('login-btn').innerText = 'Login to Inbox';
