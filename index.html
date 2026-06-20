@@ -88,8 +88,8 @@
             }
 
             list.innerHTML = emails.map((email, index) => {
-                // لو الإيميل فيه HTML أصلي هنعرضه جوه iframe، لو نص عادي هنعرضه كنص
-                const contentHtml = email.html ? `<iframe id="frame-${index}" class="w-full h-[450px] bg-white rounded-lg border border-slate-700 mt-2"></iframe>` : `<div class="text-sm text-slate-300 bg-slate-900 p-3 rounded whitespace-pre-line">${email.text}</div>`;
+                // التعديل هنا: استخدام المقاس الكبير والـ sandbox الآمن لقراءة الـ HTML النظيف
+                const contentHtml = email.html ? `<iframe id="frame-${index}" class="w-full h-[600px] bg-white rounded-xl border border-slate-700 mt-2 shadow-inner" sandbox="allow-same-origin"></iframe>` : `<div class="text-sm text-slate-300 bg-slate-900 p-4 rounded-xl whitespace-pre-line border border-slate-800">${email.text}</div>`;
                 
                 return `
                     <div class="bg-slate-950 p-4 rounded-xl border border-slate-850 space-y-2">
@@ -103,7 +103,6 @@
                 `;
             }).join('');
 
-            // حقن الـ HTML الأصلي للإيميل داخل الـ iframe عشان يظهر بالصور والألوان الأصلية لرايوت
             emails.forEach((email, index) => {
                 if (email.html) {
                     const iframe = document.getElementById(`frame-${index}`);
