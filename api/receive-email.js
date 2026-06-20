@@ -1,13 +1,13 @@
 global.emailStorage = global.emailStorage || [];
 
-// الحسابات المسموح لها بالدخول (تقدر تضيف وتغير فيها براحتك هنا)
+// Add your sold accounts here (Username and Password)
 global.validAccounts = global.validAccounts || [
   { username: "user55@ezzatrabie.com", password: "password123" },
   { username: "fortnite1@ezzatrabie.com", password: "fortnitepass" }
 ];
 
 export default async function handler(req, res) {
-  // استقبال الإيميل من كلوود فلير
+  // Receive email from Cloudflare Worker
   if (req.method === 'POST') {
     const { id_user, source, subject, text, date } = req.body;
     const cleanUser = id_user.trim().toLowerCase();
@@ -18,7 +18,7 @@ export default async function handler(req, res) {
     return res.status(200).json({ success: true });
   }
 
-  // تحقق المشتري من الحساب والباسورد لاستلام الكود
+  // Get emails for the buyer
   if (req.method === 'GET') {
     const { username, password } = req.query;
     if (!username || !password) return res.status(400).json({ error: "Missing fields" });
@@ -27,7 +27,7 @@ export default async function handler(req, res) {
 
     const accountCheck = global.validAccounts.find(acc => acc.username.toLowerCase() === cleanUser && acc.password === password);
     if (!accountCheck) {
-      return res.status(401).json({ error: "بيانات الدخول غير صحيحة أو الحساب غير مسجل" });
+      return res.status(401).json({ error: "Invalid username or password, or account not registered." });
     }
 
     const userEmails = global.emailStorage.filter(email => email.cleanUser === cleanUser);
