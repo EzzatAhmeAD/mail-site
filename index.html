@@ -19,7 +19,7 @@
                 <label class="block text-sm font-medium mb-1 text-slate-400">Password:</label>
                 <input type="password" id="password" placeholder="••••••••" class="w-full p-3 rounded-lg bg-slate-950 border border-slate-700 focus:outline-none focus:border-blue-500">
             </div>
-            <button onclick="login()" id="login-btn" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-lg transition duration-200 cursor-pointer">Login to Inbox</button>
+            <button onclick="login(event)" id="login-btn" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-lg transition duration-200 cursor-pointer">Login to Inbox</button>
             <p id="error-msg" class="text-red-400 text-sm text-center font-semibold mt-2 hidden"></p>
         </div>
     </div>
@@ -41,7 +41,7 @@
     <script>
         let checkInterval = null;
 
-        // أول ما الصفحة تفتح، بنشوف هل فيه مستخدم مسجل قبل كدا ولا لأ عشان يدخل تلقائي
+        // التحقق من الحساب المحفوظ فوراً عند تحميل الصفحة لمنع ظهور صفحة الدخول
         window.onload = function() {
             const savedUser = localStorage.getItem('saved_username');
             const savedPass = localStorage.getItem('saved_password');
@@ -49,20 +49,26 @@
             if (savedUser && savedPass) {
                 document.getElementById('username').value = savedUser;
                 document.getElementById('password').value = savedPass;
-                login(true); // تسجيل دخول تلقائي
+                
+                // إظهار صندوق الرسائل فوراً وإخفاء الكارد لتجنب الوميض
+                document.getElementById('login-card').classList.add('hidden');
+                document.getElementById('inbox-card').classList.remove('hidden');
+                document.getElementById('active-user').innerText = `Active Account: ${savedUser}`;
+                
+                startChecking(savedUser, savedPass);
             }
         };
 
-        async function login(isAuto = false) {
+        async function login(e) {
+            if (e) e.preventDefault(); // منع المتصفح من عمل ريفريش تلقائي للزرار
+
             const errorMsg = document.getElementById('error-msg');
             const loginBtn = document.getElementById('login-btn');
             
-            if (!isAuto) {
-                errorMsg.classList.add('hidden');
-                loginBtn.innerText = 'Connecting...';
-            }
+            errorMsg.classList.add('hidden');
+            loginBtn.innerText = 'Connecting...';
 
-            const userVal = document.getElementById('username').value;
+            const userVal = document.getElementById('username').value.trim();
             const pass = document.getElementById('password').value;
 
             try {
@@ -70,15 +76,13 @@
                 const data = await res.json();
 
                 if (!res.ok) {
-                    localStorage.removeItem('saved_username');
-                    localStorage.removeItem('saved_password');
                     errorMsg.innerText = data.error || 'Login failed.';
                     errorMsg.classList.remove('hidden');
                     loginBtn.innerText = 'Login to Inbox';
                     return;
                 }
 
-                // حفظ البيانات في المتصفح عشان الريفريش
+                // حفظ البيانات بشكل دائم في المتصفح
                 localStorage.setItem('saved_username', userVal);
                 localStorage.setItem('saved_password', pass);
 
@@ -87,21 +91,34 @@
                 document.getElementById('active-user').innerText = `Active Account: ${userVal}`;
                 
                 renderEmails(data.emails);
-
-                // التحديث التلقائي المستمر
-                if (checkInterval) clearInterval(checkInterval);
-                checkInterval = setInterval(async () => {
-                    const refreshRes = await fetch(`/api/receive-email?username=${encodeURIComponent(userVal)}&password=${encodeURIComponent(pass)}`);
-                    const refreshData = await refreshRes.json();
-                    if (refreshRes.ok) renderEmails(refreshData.emails);
-                }, 2000);
+                startChecking(userVal, pass);
 
             } catch (e) {
-                if (!isAuto) {
-                    errorMsg.innerText = 'Server Error.';
-                    errorMsg.classList.remove('hidden');
-                    loginBtn.innerText = 'Login to Inbox';
-                }
+                errorMsg.innerText = 'Server Error.';
+                errorMsg.classList.remove('hidden');
+                loginBtn.innerText = 'Login to Inbox';
+            }
+        }
+
+        function startChecking(userVal, pass) {
+            if (checkInterval) clearInterval(checkInterval);
+            
+            // جلب سريع أول ما يدخل
+            fetchEmails(userVal, pass);
+
+            // التحديث التلقائي كل ثانيتين
+            checkInterval = setInterval(() => {
+                fetchEmails(userVal, pass);
+            }, 2000);
+        }
+
+        async function fetchEmails(userVal, pass) {
+            try {
+                const res = await fetch(`/api/receive-email?username=${encodeURIComponent(userVal)}&password=${encodeURIComponent(pass)}`);
+                const data = await res.json();
+                if (res.ok) renderEmails(data.emails);
+            } catch (e) {
+                console.error("Error refreshing emails");
             }
         }
 
@@ -112,7 +129,6 @@
                 return;
             }
 
-            // عرض الرسائل في قائمة مرتبة ومنظمة داخل كروت احترافية
             list.innerHTML = emails.map((email, index) => {
                 const contentHtml = email.html ? 
                     `<iframe id="frame-${index}" class="w-full h-[600px] bg-white rounded-xl border border-slate-700 mt-3 shadow-inner" sandbox="allow-same-origin"></iframe>` : 
@@ -132,7 +148,6 @@
                 `;
             }).join('');
 
-            // حقن كود الـ HTML داخل الـ iframe
             emails.forEach((email, index) => {
                 if (email.html) {
                     const iframe = document.getElementById(`frame-${index}`);
@@ -148,8 +163,7 @@
 
         function logout() {
             clearInterval(checkInterval);
-            localStorage.removeItem('saved_username');
-            localStorage.removeItem('saved_password');
+            localStorage.clear();
             document.getElementById('username').value = '';
             document.getElementById('password').value = '';
             document.getElementById('login-card').classList.remove('hidden');
