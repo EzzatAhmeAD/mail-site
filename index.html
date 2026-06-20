@@ -1,342 +1,328 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" dir="ltr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Live Inbox</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <title>Instant Code Receiver</title>
     <style>
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            margin: 0; 
+            background: #0b0f19; 
+            color: #ffffff;
+            display: flex; 
+            flex-direction: column;
+            height: 100vh; 
+            overflow: hidden; 
         }
-        .spinning {
-            animation: spin 1s linear infinite;
+        /* الهيدر العلوي للموقع */
+        .header {
+            background: #111c24;
+            padding: 15px 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #1e293b;
         }
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.4; }
+        .header h1 { margin: 0; font-size: 20px; color: #38bdf8; }
+        .header p { margin: 5px 0 0 0; font-size: 12px; color: #94a3b8; }
+        .logout-btn { 
+            background: #1e293b; 
+            color: #f1f5f9; 
+            border: 1px solid #334155; 
+            padding: 8px 16px; 
+            border-radius: 4px; 
+            cursor: pointer; 
+            font-weight: bold; 
+            font-size: 13px;
         }
-        .pulse-dot {
-            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        .logout-btn:hover { background: #334155; color: #ff4d4f; }
+
+        /* حاوية المحتوى الرئيسي */
+        .app-container { display: flex; flex: 1; overflow: hidden; }
+        
+        /* القائمة الجانبية للرسائل */
+        .sidebar { 
+            width: 320px; 
+            background: #111622; 
+            height: 100%; 
+            border-right: 1px solid #1e293b; 
+            padding: 20px; 
+            box-sizing: border-box; 
+            display: flex;
+            flex-direction: column;
         }
+        .tabs { display: flex; justify-content: space-between; margin-bottom: 15px; }
+        .tabs button { 
+            width: 48%; 
+            padding: 10px; 
+            cursor: pointer; 
+            border: 1px solid #1e293b; 
+            background: #1e293b; 
+            color: #94a3b8; 
+            border-radius: 6px; 
+            font-weight: bold; 
+        }
+        .tabs button.active { background: #0284c7; color: white; border-color: #0284c7; }
+        
+        .sidebar-actions { display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; }
+        .sidebar-title { font-size: 14px; font-weight: bold; color: #94a3b8; display: flex; align-items: center; gap: 8px; }
+        .sidebar-title .count { background: #1e293b; padding: 2px 8px; border-radius: 10px; font-size: 12px; }
+        
+        .icon-btn { background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 14px; display: flex; align-items: center; gap: 5px; }
+        .icon-btn:hover { color: #fff; }
+
+        #clear-trash-btn { 
+            background: #991b1b; 
+            color: white; 
+            border: none; 
+            width: 100%; 
+            padding: 10px; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            display: none; 
+            margin-bottom: 15px; 
+            font-weight: bold; 
+        }
+        #clear-trash-btn:hover { background: #b91c1c; }
+
+        .emails-scroll { flex: 1; overflow-y: auto; }
+        .email-item { 
+            background: #111c24; 
+            padding: 15px; 
+            margin-bottom: 12px; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            border: 1px solid #1e293b; 
+            position: relative;
+            transition: all 0.2s;
+        }
+        .email-item:hover { background: #1e293b; }
+        .email-item.selected { border-color: #0284c7; background: #152232; }
+        .email-item h4 { margin: 0 0 5px 0; color: #e2e8f0; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .email-item p { margin: 0 0 12px 0; font-size: 12px; color: #94a3b8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .email-item .time { font-size: 11px; color: #64748b; float: right; }
+        
+        .action-btn { background: #334155; color: #f1f5f9; border: none; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 11px; }
+        .action-btn:hover { background: #cc3333; color: white; }
+        .action-btn.restore { background: #166534; }
+        .action-btn.restore:hover { background: #15803d; }
+
+        /* منطقة عرض محتوى الإيميل المفتوح */
+        .main-content { flex: 1; padding: 25px; overflow-y: auto; display: flex; flex-direction: column; background: #0b0f19; }
+        .email-details-header { background: #111c24; padding: 20px; border-radius: 8px 8px 0 0; border: 1px solid #1e293b; border-bottom: none; }
+        .email-details-header h3 { margin: 0 0 10px 0; font-size: 18px; color: #fff; }
+        .email-details-header p { margin: 5px 0; font-size: 13px; color: #94a3b8; }
+        .email-details-header span { color: #38bdf8; font-weight: 500; }
+        
+        #email-body { 
+            background: #ffffff; 
+            color: #000000;
+            padding: 25px; 
+            border: 1px solid #1e293b; 
+            min-height: 450px; 
+            border-radius: 0 0 8px 8px; 
+            overflow-x: auto;
+        }
+        .empty-view { color: #64748b; text-align: center; margin-top: 100px; font-size: 15px; }
     </style>
 </head>
-<body class="bg-slate-900 text-slate-100 min-h-screen font-sans flex flex-col">
+<body>
 
-    <header class="bg-slate-800 border-b border-slate-700 p-4 flex justify-between items-center shadow-md z-10">
+    <div class="header">
         <div>
-            <h1 class="text-xl font-bold text-blue-400">Instant Code Receiver</h1>
-            <p id="active-user" class="text-xs text-slate-400 mt-0.5 hidden"></p>
+            <h1>Instant Code Receiver</h1>
+            <p>Active Account: user55@ezzatrabie.com</p>
         </div>
-        <button id="logout-btn" onclick="logout()" class="bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded-lg text-sm transition cursor-pointer hidden">
-            <i class="fa-solid fa-right-from-bracket mr-1"></i> Logout
-        </button>
-    </header>
-
-    <div id="login-card" class="flex-1 flex items-center justify-center p-4">
-        <div class="bg-slate-800 p-8 rounded-2xl shadow-xl w-full max-w-md border border-slate-700">
-            <h2 class="text-2xl font-bold text-center text-blue-400 mb-6">Login to Inbox</h2>
-            <form onsubmit="login(event)" class="space-y-4">
-                <div>
-                    <label class="block text-sm font-medium mb-1 text-slate-400">Email / Username:</label>
-                    <input type="text" id="username" placeholder="example@ezzatrabie.com" class="w-full p-3 rounded-lg bg-slate-950 border border-slate-700 focus:outline-none focus:border-blue-500 text-white" required>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium mb-1 text-slate-400">Password:</label>
-                    <div class="relative">
-                        <input type="password" id="password" placeholder="••••••••" class="w-full p-3 rounded-lg bg-slate-950 border border-slate-700 focus:outline-none focus:border-blue-500 pr-10 text-white" required>
-                        <button type="button" onclick="togglePasswordVisibility()" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 cursor-pointer">
-                            <i id="password-toggle-icon" class="fa-regular fa-eye"></i>
-                        </button>
-                    </div>
-                </div>
-                <button type="submit" id="login-submit-btn" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-lg transition duration-200 cursor-pointer">Login</button>
-                <p id="error-msg" class="text-red-400 text-sm text-center font-semibold mt-2 hidden"></p>
-            </form>
-        </div>
+        <button class="logout-btn" onclick="logout()">Logout ➔</button>
     </div>
 
-    <div id="inbox-card" class="flex-1 flex overflow-hidden hidden">
-        <aside class="w-1/3 min-w-[350px] max-w-[430px] bg-slate-850 border-r border-slate-750 flex flex-col">
-            <div class="p-4 bg-slate-900 border-b border-slate-800 flex justify-between items-center">
-                <div class="flex items-center gap-2">
-                    <span class="w-2.5 h-2.5 bg-green-500 rounded-full pulse-dot" title="Live syncing enabled"></span>
-                    <span class="text-sm font-semibold text-slate-400">Messages Inbox (<span id="inbox-count">0</span>)</span>
-                </div>
-                <div class="flex items-center gap-3">
-                    <button onclick="clearAllEmails()" class="text-slate-500 hover:text-red-400 transition cursor-pointer text-xs font-medium" title="Clear all messages">
-                        <i class="fa-solid fa-broom mr-0.5"></i> Clear All
-                    </button>
-                    <button onclick="manualRefresh()" class="text-slate-400 hover:text-blue-400 transition cursor-pointer p-1" title="Refresh Emails">
-                        <i id="refresh-icon" class="fa-solid fa-arrow-rotate-right text-sm"></i>
-                    </button>
-                </div>
-            </div>
-            <div id="emails-list" class="flex-1 overflow-y-auto p-2 space-y-2">
-                <p class="text-slate-500 text-center py-8 text-sm">Waiting for emails...</p>
-            </div>
-        </aside>
-
-        <main class="flex-1 bg-slate-900 flex flex-col overflow-hidden">
-            <div id="email-detail-view" class="flex-1 p-6 overflow-y-auto space-y-4 hidden">
-                <div class="bg-slate-950 p-5 rounded-2xl border border-slate-800 shadow-md space-y-3">
-                    <div class="flex flex-wrap justify-between items-center text-xs text-slate-400 bg-slate-900 p-3 rounded-lg border border-slate-800 gap-2">
-                        <div><span class="text-blue-400 font-medium">From:</span> <span id="detail-from"></span></div>
-                        <div><span class="text-blue-400 font-medium">Received:</span> <span id="detail-date"></span></div>
-                    </div>
-                    <div class="text-lg font-semibold text-slate-200 pl-1">
-                        <span class="text-blue-500">Subject:</span> <span id="detail-subject"></span>
-                    </div>
-                    <div id="detail-content-area"></div>
-                </div>
+    <div class="app-container">
+        <div class="sidebar">
+            <div class="tabs">
+                <button id="tab-inbox" class="active" onclick="switchTab('inbox')">Inbox</button>
+                <button id="tab-trash" onclick="switchTab('trash')">Trash</button>
             </div>
             
-            <div id="no-email-selected" class="flex-1 flex flex-col items-center justify-center text-slate-500 p-4">
-                <svg class="w-16 h-16 mb-4 opacity-40 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 19v-8.93a2 2 0 01.89-1.664l8-5.333a2 2 0 012.22 0l8 5.333A2 2 0 0121 10.07V19a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 11l9 6 9-6"/>
-                </svg>
-                <p class="text-sm">Select an email from the left pane to view its content.</p>
+            <div class="sidebar-actions">
+                <div class="sidebar-title">
+                    <span id="list-title">Messages Inbox</span>
+                    <span class="count" id="mail-count">0</span>
+                </div>
+                <button class="icon-btn" onclick="fetchEmails()">🔁 Refresh</button>
             </div>
-        </main>
+            
+            <button id="clear-trash-btn" onclick="clearAllTrash()">Empty Trash Permanently</button>
+
+            <div class="emails-scroll" id="emails-list">
+                </div>
+        </div>
+
+        <div class="main-content" id="mail-viewer">
+            <div class="empty-view" id="empty-message">
+                Select an email to view its content here...
+            </div>
+            <div id="email-card" style="display: none;">
+                <div class="email-details-header">
+                    <h3 id="view-subject">Subject</h3>
+                    <p>From: <span id="view-from">sender</span></p>
+                </div>
+                <div id="email-body">
+                    </div>
+            </div>
+        </div>
     </div>
 
     <script>
-        let checkInterval = null;
+        // التحقق من صلاحية تسجيل الدخول
+        if (localStorage.getItem('isLoggedIn') !== 'true' && sessionStorage.getItem('isLoggedIn') !== 'true') {
+            window.location.href = 'login.html';
+        }
+
         let allEmails = [];
-        let deletedEmailIds = JSON.parse(localStorage.getItem('deleted_emails') || '[]'); 
-        let selectedEmailIndex = null;
+        let currentTab = 'inbox';
+        let selectedEmailId = null;
 
-        window.onload = function() {
-            const savedUser = localStorage.getItem('saved_username');
-            const savedPass = localStorage.getItem('saved_password');
-            if (savedUser && savedPass) {
-                document.getElementById('username').value = savedUser;
-                document.getElementById('password').value = savedPass;
-                showInboxUI(savedUser);
-                startChecking(savedUser, savedPass);
-            }
-        };
-
-        function togglePasswordVisibility() {
-            const passwordInput = document.getElementById('password');
-            const toggleIcon = document.getElementById('password-toggle-icon');
-            if (passwordInput.type === 'password') {
-                passwordInput.type = 'text';
-                toggleIcon.classList.remove('fa-eye');
-                toggleIcon.classList.add('fa-eye-slash');
-            } else {
-                passwordInput.type = 'password';
-                toggleIcon.classList.remove('fa-eye-slash');
-                toggleIcon.classList.add('fa-eye');
-            }
-        }
-
-        async function login(e) {
-            if (e) e.preventDefault();
-            const errorMsg = document.getElementById('error-msg');
-            const loginBtn = document.getElementById('login-submit-btn');
-            
-            errorMsg.classList.add('hidden');
-            loginBtn.innerText = 'Connecting...';
-
-            const userVal = document.getElementById('username').value.trim();
-            const pass = document.getElementById('password').value;
-
+        // دالة جلب البيانات من الـ API الحقيقي الخاص بك (/api/receive-email)
+        async function fetchEmails() {
             try {
-                const res = await fetch(`/api/receive-email?username=${encodeURIComponent(userVal)}&password=${encodeURIComponent(pass)}`);
-                const data = await res.json();
-
-                if (!res.ok) {
-                    errorMsg.innerText = data.error || 'Login failed.';
-                    errorMsg.classList.remove('hidden');
-                    loginBtn.innerText = 'Login';
-                    return;
-                }
-
-                localStorage.setItem('saved_username', userVal);
-                localStorage.setItem('saved_password', pass);
+                const response = await fetch('/api/receive-email'); 
+                const data = await response.json();
                 
-                showInboxUI(userVal);
-                allEmails = data.emails || [];
-                renderEmailsList();
-                startChecking(userVal, pass);
-            } catch (err) {
-                errorMsg.innerText = 'Server Error.';
-                errorMsg.classList.remove('hidden');
-                loginBtn.innerText = 'Login';
+                // دمج الخصائص والتأكد من حالة الحذف
+                allEmails = data.map(email => ({
+                    ...email,
+                    isDeleted: email.isDeleted || false 
+                }));
+                
+                renderEmails();
+            } catch (error) {
+                console.error("Error fetching emails:", error);
             }
         }
 
-        UX = showInboxUI;
-        function showInboxUI(user) {
-            document.getElementById('login-card').classList.add('hidden');
-            document.getElementById('inbox-card').classList.remove('hidden');
-            
-            const activeUser = document.getElementById('active-user');
-            activeUser.innerText = `Active Account: ${user}`;
-            activeUser.classList.remove('hidden');
-            document.getElementById('logout-btn').classList.remove('hidden');
-        }
+        function renderEmails() {
+            const listContainer = document.getElementById('emails-list');
+            listContainer.innerHTML = ''; 
 
-        function startChecking(userVal, pass) {
-            if (checkInterval) clearInterval(checkInterval);
-            fetchEmails(userVal, pass);
-            checkInterval = setInterval(() => { fetchEmails(userVal, pass); }, 2000);
-        }
+            let filteredEmails = allEmails.filter(email => {
+                if (currentTab === 'inbox') return !email.isDeleted;
+                if (currentTab === 'trash') return email.isDeleted;
+            });
 
-        async function manualRefresh() {
-            const icon = document.getElementById('refresh-icon');
-            icon.classList.add('spinning');
+            // تحديث العدد وعنوان القائمة
+            document.getElementById('mail-count').innerText = filteredEmails.length;
+            document.getElementById('list-title').innerText = currentTab === 'inbox' ? 'Messages Inbox' : 'Trash Folder';
 
-            const userVal = localStorage.getItem('saved_username');
-            const pass = localStorage.getItem('saved_password');
-            if (userVal && pass) {
-                await fetchEmails(userVal, pass);
-            }
-            setTimeout(() => { icon.classList.remove('spinning'); }, 800);
-        }
+            // إظهار زر الحذف النهائي الكل في التراش فقط
+            document.getElementById('clear-trash-btn').style.display = (currentTab === 'trash' && filteredEmails.length > 0) ? 'block' : 'none';
 
-        async function fetchEmails(userVal, pass) {
-            try {
-                const res = await fetch(`/api/receive-email?username=${encodeURIComponent(userVal)}&password=${encodeURIComponent(pass)}`);
-                const data = await res.json();
-                if (res.ok) {
-                    allEmails = data.emails || [];
-                    renderEmailsList();
-                    if (selectedEmailIndex !== null) {
-                        viewEmail(selectedEmailIndex, false); 
-                    }
-                }
-            } catch (err) {
-                console.error("Error refreshing emails");
-            }
-        }
-
-        function renderEmailsList() {
-            const list = document.getElementById('emails-list');
-            const activeEmails = allEmails.filter(email => !deletedEmailIds.includes(email.date));
-
-            document.getElementById('inbox-count').innerText = activeEmails.length;
-
-            if (!activeEmails || activeEmails.length === 0) {
-                list.innerHTML = '<p class="text-slate-500 text-center py-8 text-sm">No messages received yet.</p>';
+            if (filteredEmails.length === 0) {
+                listContainer.innerHTML = '<div style="color:#64748b; text-align:center; padding:20px; font-size:13px;">No emails found</div>';
                 return;
             }
-            
-            list.innerHTML = allEmails.map((email, index) => {
-                if (deletedEmailIds.includes(email.date)) return '';
 
-                const displaySource = email.source.split('<')[0].replace(/"/g, '').trim() || email.source;
-                const isSelected = selectedEmailIndex === index ? 'border-blue-500 bg-slate-800' : 'border-slate-800 bg-slate-950 hover:bg-slate-900';
-                
-                return `
-                    <div onclick="viewEmail(${index}, true)" class="${isSelected} border p-3 rounded-xl cursor-pointer transition duration-150 flex justify-between items-center gap-2 group">
-                        <div class="flex-1 min-w-0 space-y-1">
-                            <div class="flex justify-between items-center">
-                                <span class="font-bold text-sm text-blue-400 truncate max-w-[150px]">${displaySource}</span>
-                                <span class="text-[10px] text-slate-500">${new Date(email.date).toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit'})}</span>
-                            </div>
-                            <div class="text-xs text-slate-300 truncate font-medium">${email.subject}</div>
-                        </div>
-                        <button onclick="deleteEmail(event, '${email.date}', ${index})" class="text-slate-500 hover:text-red-400 p-2 rounded-lg transition opacity-0 group-hover:opacity-100 duration-150" title="Delete Email">
-                            <i class="fa-regular fa-trash-can"></i>
-                        </button>
+            // ترتيب تنازلي (الأحدث فوق أوتوماتيك)
+            filteredEmails.reverse().forEach(email => {
+                const isSelected = selectedEmailId == email.id ? 'selected' : '';
+                const fromAddress = email.sender || email.source || email.from || 'Unknown Sender';
+                const subjectText = email.subject || 'No Subject';
+                const timeText = email.received || email.time || '';
+
+                const btnAction = currentTab === 'inbox' 
+                    ? `<button class="action-btn" onclick="moveToTrash(event, '${email.id}')">Trash</button>`
+                    : `<button class="action-btn" onclick="deletePermanently(event, '${email.id}')">Delete</button>
+                       <button class="action-btn restore" onclick="restoreEmail(event, '${email.id}')">Restore</button>`;
+
+                const emailHTML = `
+                    <div class="email-item ${isSelected}" onclick="showContent('${email.id}')">
+                        <span class="time">${timeText}</span>
+                        <h4>${fromAddress}</h4>
+                        <p>${subjectText}</p>
+                        ${btnAction}
                     </div>
                 `;
-            }).join('');
+                listContainer.insertAdjacentHTML('beforeend', emailHTML);
+            });
         }
 
-        function viewEmail(index, shouldScroll = true) {
-            const email = allEmails[index];
-            if (!email || deletedEmailIds.includes(email.date)) {
-                closeEmailView();
-                return;
-            }
+        function switchTab(tab) {
+            currentTab = tab;
+            document.getElementById('tab-inbox').classList.toggle('active', tab === 'inbox');
+            document.getElementById('tab-trash').classList.toggle('active', tab === 'trash');
+            renderEmails();
+        }
 
-            selectedEmailIndex = index;
-            renderEmailsList();
-
-            document.getElementById('no-email-selected').classList.add('hidden');
-            document.getElementById('email-detail-view').classList.remove('hidden');
-
-            document.getElementById('detail-from').innerText = email.source;
-            document.getElementById('detail-date').innerText = new Date(email.date).toLocaleString('en-US');
-            document.getElementById('detail-subject').innerText = email.subject;
-            
-            const contentArea = document.getElementById('detail-content-area');
-            
-            if (email.html) {
-                const existingFrame = document.getElementById('detail-frame');
-                if (!existingFrame) {
-                    contentArea.innerHTML = `<iframe id="detail-frame" class="w-full h-[580px] bg-white rounded-xl border border-slate-700 mt-2 shadow-inner" sandbox="allow-same-origin"></iframe>`;
-                }
+        function showContent(id) {
+            selectedEmailId = id;
+            const email = allEmails.find(e => e.id == id);
+            if (email) {
+                document.getElementById('empty-message').style.display = 'none';
+                document.getElementById('email-card').style.display = 'block';
                 
-                const iframe = document.getElementById('detail-frame');
-                if (iframe) {
-                    const doc = iframe.contentDocument || iframe.contentWindow.document;
-                    if (iframe.getAttribute('data-src-html') !== email.html) {
-                        doc.open();
-                        doc.write(email.html);
-                        doc.close();
-                        iframe.setAttribute('data-src-html', email.html);
-                    }
-                }
-            } else {
-                contentArea.innerHTML = `<div class="text-sm text-slate-300 bg-slate-900 p-4 rounded-xl whitespace-pre-line border border-slate-800 mt-2">${email.text}</div>`;
+                document.getElementById('view-subject').innerText = email.subject || 'No Subject';
+                document.getElementById('view-from').innerText = email.sender || email.source || email.from || 'Unknown Sender';
+                
+                // عرض محتوى الرسالة، ويدعم الصيغ النصية والـ HTML كاملة مثل رسائل جوجل
+                document.getElementById('email-body').innerHTML = email.rawBody || email.body || email.html || "No Content";
+                
+                // إعادة رسم القائمة لإضافة كلاس الـ selected الازرق
+                renderEmails();
             }
         }
 
-        function deleteEmail(event, emailDateId, index) {
+        function moveToTrash(event, id) {
+            event.stopPropagation(); 
+            const email = allEmails.find(e => e.id == id);
+            if (email) email.isDeleted = true;
+            resetViewerIfActive(id);
+            renderEmails();
+        }
+
+        function restoreEmail(event, id) {
             event.stopPropagation();
-            if (confirm("Are you sure you want to delete this email?")) {
-                deletedEmailIds.push(emailDateId);
-                localStorage.setItem('deleted_emails', JSON.stringify(deletedEmailIds));
-                if (selectedEmailIndex === index) {
-                    closeEmailView();
-                }
-                renderEmailsList();
+            const email = allEmails.find(e => e.id == id);
+            if (email) email.isDeleted = false;
+            resetViewerIfActive(id);
+            renderEmails();
+        }
+
+        function deletePermanently(event, id) {
+            event.stopPropagation();
+            allEmails = allEmails.filter(e => e.id != id);
+            resetViewerIfActive(id);
+            renderEmails();
+        }
+
+        function clearAllTrash() {
+            if (confirm('Are you sure you want to permanently delete all items in the Trash? This cannot be undone.')) {
+                allEmails = allEmails.filter(e => !e.isDeleted); 
+                document.getElementById('email-card').style.display = 'none';
+                document.getElementById('empty-message').style.display = 'block';
+                selectedEmailId = null;
+                renderEmails();
             }
         }
 
-        function clearAllEmails() {
-            const activeEmails = allEmails.filter(email => !deletedEmailIds.includes(email.date));
-            if (activeEmails.length === 0) return;
-
-            if (confirm("Are you sure you want to delete ALL messages in the inbox?")) {
-                activeEmails.forEach(email => {
-                    deletedEmailIds.push(email.date);
-                });
-                localStorage.setItem('deleted_emails', JSON.stringify(deletedEmailIds));
-                closeEmailView();
-                renderEmailsList();
+        function resetViewerIfActive(id) {
+            if (selectedEmailId == id) {
+                document.getElementById('email-card').style.display = 'none';
+                document.getElementById('empty-message').style.display = 'block';
+                selectedEmailId = null;
             }
-        }
-
-        function closeEmailView() {
-            selectedEmailIndex = null;
-            document.getElementById('email-detail-view').classList.add('hidden');
-            document.getElementById('no-email-selected').classList.remove('hidden');
         }
 
         function logout() {
-            clearInterval(checkInterval);
-            localStorage.removeItem('saved_username');
-            localStorage.removeItem('saved_password');
-            allEmails = [];
-            selectedEmailIndex = null;
-            document.getElementById('username').value = '';
-            document.getElementById('password').value = '';
-            
-            closeEmailView();
-            document.getElementById('inbox-card').classList.add('hidden');
-            document.getElementById('logout-btn').classList.add('hidden');
-            document.getElementById('active-user').classList.add('hidden');
-            document.getElementById('login-card').classList.remove('hidden');
-            document.getElementById('login-submit-btn').innerText = 'Login';
+            localStorage.removeItem('isLoggedIn');
+            sessionStorage.removeItem('isLoggedIn');
+            window.location.href = 'login.html';
         }
+
+        // تشغيل جلب البيانات مباشرة عند فتح الصفحة
+        fetchEmails(); 
+
+        // تحديث تلقائي كل 10 ثوانٍ للرسائل الجديدة
+        setInterval(fetchEmails, 10000);
+
     </script>
 </body>
 </html>
