@@ -3,9 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <title>Instant Code Receiver</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
+        /* تحسين السكرول بار ليناسب الدارك مود */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #0b0f19; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+
         body { 
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            font-family: 'Inter', sans-serif; 
             margin: 0; 
             background: #0b0f19; 
             color: #ffffff;
@@ -14,7 +21,6 @@
             height: 100vh; 
             overflow: hidden; 
         }
-        /* الهيدر العلوي للموقع */
         .header {
             background: #111c24;
             padding: 15px 25px;
@@ -23,26 +29,26 @@
             align-items: center;
             border-bottom: 1px solid #1e293b;
         }
-        .header h1 { margin: 0; font-size: 20px; color: #38bdf8; }
-        .header p { margin: 5px 0 0 0; font-size: 12px; color: #94a3b8; }
+        .header h1 { margin: 0; font-size: 22px; font-weight: 600; color: #38bdf8; }
+        .header p { margin: 5px 0 0 0; font-size: 13px; color: #94a3b8; }
         .logout-btn { 
             background: #1e293b; 
             color: #f1f5f9; 
             border: 1px solid #334155; 
-            padding: 8px 16px; 
-            border-radius: 4px; 
+            padding: 8px 18px; 
+            border-radius: 6px; 
             cursor: pointer; 
-            font-weight: bold; 
-            font-size: 13px;
+            font-weight: 500; 
+            font-size: 14px;
+            font-family: 'Inter', sans-serif;
+            transition: 0.2s;
         }
         .logout-btn:hover { background: #334155; color: #ff4d4f; }
 
-        /* حاوية المحتوى الرئيسي */
         .app-container { display: flex; flex: 1; overflow: hidden; }
         
-        /* القائمة الجانبية للرسائل */
         .sidebar { 
-            width: 320px; 
+            width: 340px; 
             background: #111622; 
             height: 100%; 
             border-right: 1px solid #1e293b; 
@@ -51,79 +57,84 @@
             display: flex;
             flex-direction: column;
         }
-        .tabs { display: flex; justify-content: space-between; margin-bottom: 15px; }
+        .tabs { display: flex; justify-content: space-between; margin-bottom: 20px; gap: 10px; }
         .tabs button { 
-            width: 48%; 
+            flex: 1; 
             padding: 10px; 
             cursor: pointer; 
             border: 1px solid #1e293b; 
             background: #1e293b; 
             color: #94a3b8; 
             border-radius: 6px; 
-            font-weight: bold; 
+            font-weight: 500;
+            font-family: 'Inter', sans-serif;
+            transition: 0.2s;
         }
         .tabs button.active { background: #0284c7; color: white; border-color: #0284c7; }
         
         .sidebar-actions { display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; }
-        .sidebar-title { font-size: 14px; font-weight: bold; color: #94a3b8; display: flex; align-items: center; gap: 8px; }
-        .sidebar-title .count { background: #1e293b; padding: 2px 8px; border-radius: 10px; font-size: 12px; }
+        .sidebar-title { font-size: 15px; font-weight: 600; color: #cbd5e1; display: flex; align-items: center; gap: 8px; }
+        .sidebar-title .count { background: #1e293b; padding: 2px 8px; border-radius: 12px; font-size: 12px; color: #38bdf8; }
         
-        .icon-btn { background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 14px; display: flex; align-items: center; gap: 5px; }
+        .icon-btn { background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 14px; display: flex; align-items: center; gap: 5px; font-family: 'Inter', sans-serif; }
         .icon-btn:hover { color: #fff; }
 
         #clear-trash-btn { 
-            background: #991b1b; 
-            color: white; 
-            border: none; 
+            background: rgba(220, 38, 38, 0.1); 
+            color: #ef4444; 
+            border: 1px solid #dc2626; 
             width: 100%; 
             padding: 10px; 
             border-radius: 6px; 
             cursor: pointer; 
             display: none; 
             margin-bottom: 15px; 
-            font-weight: bold; 
+            font-weight: 600; 
+            font-family: 'Inter', sans-serif;
+            transition: 0.2s;
         }
-        #clear-trash-btn:hover { background: #b91c1c; }
+        #clear-trash-btn:hover { background: #dc2626; color: white; }
 
-        .emails-scroll { flex: 1; overflow-y: auto; }
+        .emails-scroll { flex: 1; overflow-y: auto; padding-right: 5px; }
         .email-item { 
             background: #111c24; 
-            padding: 15px; 
+            padding: 16px; 
             margin-bottom: 12px; 
-            border-radius: 6px; 
+            border-radius: 8px; 
             cursor: pointer; 
             border: 1px solid #1e293b; 
             position: relative;
-            transition: all 0.2s;
+            transition: all 0.2s ease;
         }
-        .email-item:hover { background: #1e293b; }
-        .email-item.selected { border-color: #0284c7; background: #152232; }
-        .email-item h4 { margin: 0 0 5px 0; color: #e2e8f0; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .email-item p { margin: 0 0 12px 0; font-size: 12px; color: #94a3b8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .email-item .time { font-size: 11px; color: #64748b; float: right; }
+        .email-item:hover { border-color: #475569; transform: translateY(-1px); }
+        .email-item.selected { border-color: #38bdf8; background: #152232; }
+        .email-item h4 { margin: 0 0 6px 0; color: #e2e8f0; font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .email-item p { margin: 0 0 12px 0; font-size: 13px; color: #94a3b8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .email-item .time { font-size: 11px; color: #64748b; float: right; font-weight: 500; }
         
-        .action-btn { background: #334155; color: #f1f5f9; border: none; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 11px; }
-        .action-btn:hover { background: #cc3333; color: white; }
+        .action-btn { background: #334155; color: #f1f5f9; border: none; padding: 5px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-family: 'Inter', sans-serif; transition: 0.2s; }
+        .action-btn:hover { background: #ef4444; color: white; }
         .action-btn.restore { background: #166534; }
         .action-btn.restore:hover { background: #15803d; }
 
-        /* منطقة عرض محتوى الإيميل المفتوح */
-        .main-content { flex: 1; padding: 25px; overflow-y: auto; display: flex; flex-direction: column; background: #0b0f19; }
-        .email-details-header { background: #111c24; padding: 20px; border-radius: 8px 8px 0 0; border: 1px solid #1e293b; border-bottom: none; }
-        .email-details-header h3 { margin: 0 0 10px 0; font-size: 18px; color: #fff; }
-        .email-details-header p { margin: 5px 0; font-size: 13px; color: #94a3b8; }
+        .main-content { flex: 1; padding: 30px; overflow-y: auto; display: flex; flex-direction: column; background: #0b0f19; }
+        .email-details-header { background: #111c24; padding: 25px; border-radius: 10px 10px 0 0; border: 1px solid #1e293b; border-bottom: none; }
+        .email-details-header h3 { margin: 0 0 12px 0; font-size: 20px; font-weight: 600; color: #fff; }
+        .email-details-header p { margin: 5px 0; font-size: 14px; color: #94a3b8; }
         .email-details-header span { color: #38bdf8; font-weight: 500; }
         
         #email-body { 
             background: #ffffff; 
-            color: #000000;
-            padding: 25px; 
+            color: #0f172a;
+            padding: 30px; 
             border: 1px solid #1e293b; 
-            min-height: 450px; 
-            border-radius: 0 0 8px 8px; 
+            min-height: 500px; 
+            border-radius: 0 0 10px 10px; 
             overflow-x: auto;
+            font-size: 14px;
+            line-height: 1.6;
         }
-        .empty-view { color: #64748b; text-align: center; margin-top: 100px; font-size: 15px; }
+        .empty-view { color: #64748b; text-align: center; margin-top: 150px; font-size: 16px; font-weight: 500; }
     </style>
 </head>
 <body>
@@ -145,7 +156,7 @@
             
             <div class="sidebar-actions">
                 <div class="sidebar-title">
-                    <span id="list-title">Messages Inbox</span>
+                    <span id="list-title">Messages</span>
                     <span class="count" id="mail-count">0</span>
                 </div>
                 <button class="icon-btn" onclick="fetchEmails()">🔁 Refresh</button>
@@ -173,7 +184,6 @@
     </div>
 
     <script>
-        // التحقق من صلاحية تسجيل الدخول
         if (localStorage.getItem('isLoggedIn') !== 'true' && sessionStorage.getItem('isLoggedIn') !== 'true') {
             window.location.href = 'login.html';
         }
@@ -182,13 +192,11 @@
         let currentTab = 'inbox';
         let selectedEmailId = null;
 
-        // دالة جلب البيانات من الـ API الحقيقي الخاص بك (/api/receive-email)
         async function fetchEmails() {
             try {
                 const response = await fetch('/api/receive-email'); 
                 const data = await response.json();
                 
-                // دمج الخصائص والتأكد من حالة الحذف
                 allEmails = data.map(email => ({
                     ...email,
                     isDeleted: email.isDeleted || false 
@@ -209,19 +217,16 @@
                 if (currentTab === 'trash') return email.isDeleted;
             });
 
-            // تحديث العدد وعنوان القائمة
             document.getElementById('mail-count').innerText = filteredEmails.length;
-            document.getElementById('list-title').innerText = currentTab === 'inbox' ? 'Messages Inbox' : 'Trash Folder';
+            document.getElementById('list-title').innerText = currentTab === 'inbox' ? 'Inbox Messages' : 'Trash Folder';
 
-            // إظهار زر الحذف النهائي الكل في التراش فقط
             document.getElementById('clear-trash-btn').style.display = (currentTab === 'trash' && filteredEmails.length > 0) ? 'block' : 'none';
 
             if (filteredEmails.length === 0) {
-                listContainer.innerHTML = '<div style="color:#64748b; text-align:center; padding:20px; font-size:13px;">No emails found</div>';
+                listContainer.innerHTML = '<div style="color:#64748b; text-align:center; padding:30px 20px; font-size:14px;">No emails found</div>';
                 return;
             }
 
-            // ترتيب تنازلي (الأحدث فوق أوتوماتيك)
             filteredEmails.reverse().forEach(email => {
                 const isSelected = selectedEmailId == email.id ? 'selected' : '';
                 const fromAddress = email.sender || email.source || email.from || 'Unknown Sender';
@@ -261,11 +266,8 @@
                 
                 document.getElementById('view-subject').innerText = email.subject || 'No Subject';
                 document.getElementById('view-from').innerText = email.sender || email.source || email.from || 'Unknown Sender';
-                
-                // عرض محتوى الرسالة، ويدعم الصيغ النصية والـ HTML كاملة مثل رسائل جوجل
                 document.getElementById('email-body').innerHTML = email.rawBody || email.body || email.html || "No Content";
                 
-                // إعادة رسم القائمة لإضافة كلاس الـ selected الازرق
                 renderEmails();
             }
         }
@@ -294,7 +296,7 @@
         }
 
         function clearAllTrash() {
-            if (confirm('Are you sure you want to permanently delete all items in the Trash? This cannot be undone.')) {
+            if (confirm('Are you sure you want to permanently delete all items in the Trash?')) {
                 allEmails = allEmails.filter(e => !e.isDeleted); 
                 document.getElementById('email-card').style.display = 'none';
                 document.getElementById('empty-message').style.display = 'block';
@@ -317,10 +319,7 @@
             window.location.href = 'login.html';
         }
 
-        // تشغيل جلب البيانات مباشرة عند فتح الصفحة
         fetchEmails(); 
-
-        // تحديث تلقائي كل 10 ثوانٍ للرسائل الجديدة
         setInterval(fetchEmails, 10000);
 
     </script>
